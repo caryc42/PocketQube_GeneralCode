@@ -32,7 +32,7 @@ void setup() {
   pinMode(RFM69_RST, OUTPUT);
   digitalWrite(RFM69_RST, LOW);
 
-  Serial.println("Feather RFM69 TX Test!");
+  Serial.println("******RFM69 Test********");
   Serial.println();
 
   // manual reset
@@ -84,9 +84,11 @@ void loop(){
 
 void send() {
   delay(1000);  // Wait 1 second between transmits, could also 'sleep' here!
-
-  char radiopacket[20] = "This is Cary #";
-  itoa(packetnum++, radiopacket+13, 10);
+  
+  //create 60 byte memory array (61 is the max?)
+  char radiopacket[27] = "This is Dr Chun testing #";
+  //convert integer to ASCII, moved incremented packetnum to radiopacket location
+  itoa(packetnum++, radiopacket+25, 10);
   Serial.print("Sending "); Serial.println(radiopacket);
 
   // Send a message!
@@ -98,7 +100,7 @@ void send() {
 void listen() {
     // Wait for a reply
   count = 0;  
-  while (count < 10){
+  while (count < 20){
     Serial.print(count);
     uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
     uint8_t len = sizeof(buf);
