@@ -129,7 +129,9 @@ void setup() {
 void loop() {
   delay(1000);  // Wait 1 second between transmits, could also 'sleep' here!
 
+  //creates 20 byte memory array (no more than 19 characters)
   char radiopacket[20] = "Hello World #";
+  //converts integer to aski
   itoa(packetnum++, radiopacket+13, 10);
   Serial.print("Sending "); Serial.println(radiopacket);
 
