@@ -64,7 +64,7 @@ void setup() {
   Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
 
   Serial.println("Send a Command:");
-  Serial.println("send, listen");
+  Serial.println("send #, listen");
 }
 
 void loop(){
@@ -72,34 +72,63 @@ void loop(){
     command = Serial.readStringUntil('\n');
     command.trim();
   
-    if (command.equals("send")) {
-      send();
+    // Check if the command STARTS with "send"
+    if (command.startsWith("send")) {
+      
+      // Look for a space character separating "send" from the number
+      int spaceIndex = command.indexOf(' ');
+      
+      if (spaceIndex != -1) {
+        // Extract the substring after the space and convert it to an integer
+        String countString = command.substring(spaceIndex + 1);
+        int repeatCount = countString.toInt();
+        
+        // Call send and pass the number to it
+        send(repeatCount);
+      }
+      else {
+        // If they just typed "send" without a number, default to 1 time
+        send(1);
+      }
     }
 
     else if (command.equals("listen")){
       listen();
     }
+
+    else {
+      Serial.print("Unknown command received: ");
+      Serial.println(command);
+    }
+
   }
 }
 
-void send() {
-  delay(1000);  // Wait 1 second between transmits, could also 'sleep' here!
+void send(int times) {
+  for(int i = 0; i < times; i++){
   
-  //create 60 byte memory array (61 is the max?)
-  char radiopacket[27] = "This is Dr Chun testing #";
-  //convert integer to ASCII, moved incremented packetnum to radiopacket location
-  itoa(packetnum++, radiopacket+25, 10);
-  Serial.print("Sending "); Serial.println(radiopacket);
+    //create 60 byte memory array (61 is the max?)
+    char radiopacket[40] = "This is test packet from the RFM69 #";
+    //convert integer to ASCII, moved incremented packetnum to radiopacket location
+    itoa(packetnum++, radiopacket+36, 10);
+    Serial.print("Sending "); 
+    Serial.println(radiopacket);
 
-  // Send a message!
-  rf69.send((uint8_t *)radiopacket, strlen(radiopacket));
-  rf69.waitPacketSent();
+    // Send the message
+    rf69.send((uint8_t *)radiopacket, strlen(radiopacket));
+    rf69.waitPacketSent();
+
+    // Wait 1 second between transmits, could also 'sleep' here!
+    delay(1000);  
+
+  }
 }
 
 
 void listen() {
     // Wait for a reply
-  count = 0;  
+  count = 0;
+  //how many cycles before exiting listen command 
   while (count < 20){
     Serial.print(count);
     uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
