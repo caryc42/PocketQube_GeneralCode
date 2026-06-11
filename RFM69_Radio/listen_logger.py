@@ -38,6 +38,29 @@ def write_listen_block(handle, message: str, packet_number: str, rssi: str) -> N
     handle.flush()
 
 
+def close_log(handle):
+    if handle is not None:
+        handle.close()
+
+
+def log_message_from_line(handle, payload_line: str) -> bool:
+    if not payload_line.startswith("Got message: "):
+        return False
+
+    content = payload_line.removeprefix("Got message: ").strip()
+    if ", RSSI:" not in content:
+        return False
+
+    message, rssi_part = content.rsplit(", RSSI:", 1)
+    message = message.strip()
+    rssi = rssi_part.strip()
+
+    packet_match = re.search(r"#\s*(\d+)", message)
+    packet_number = packet_match.group(1) if packet_match else "Unknown"
+    write_listen_block(handle, message, packet_number, rssi)
+    return True
+
+
 def print_prompt() -> None:
     sys.stdout.write(PROMPT)
     sys.stdout.flush()
@@ -76,7 +99,7 @@ def main() -> None:
 
                         if line.lower() == "q":
                             if listen_active and log_handle is not None:
-                                log_handle.close()
+                                close_log(log_handle)
                                 log_handle = None
                                 listen_active = False
                                 pending_message = None
@@ -126,7 +149,10 @@ def main() -> None:
                         print(f"Logging listen session to {log_path.name}")
 
                     elif line.startswith("Got message: "):
-                        pending_message = line.removeprefix("Got message: ").strip()
+                        if listen_active and log_handle and log_message_from_line(log_handle, line):
+                            pending_message = None
+                        else:
+                            pending_message = line.removeprefix("Got message: ").strip()
 
                     elif (line.startswith(", RSSI:") or line.startswith("RSSI:")) and listen_active and log_handle:
                         if pending_message is not None:
@@ -138,7 +164,7 @@ def main() -> None:
 
                     elif "Exiting listen mode" in line:
                         if log_handle is not None:
-                            log_handle.close()
+                            close_log(log_handle)
                             log_handle = None
                         listen_active = False
                         pending_message = None
