@@ -5,13 +5,16 @@ import scipy
 # fs - sampling frequency/ sample rate
 fs, signal = scipy.io.wavfile.read(r"C:\Users\Oscar\Downloads\1_12-38-05_434400000Hz.wav")
 fc = 433.92e6
-Ts = 1/fs
-t = np.arange(0, 1, Ts)
 bit_rate = 8e3
 bit_dur = 1/bit_rate # 1/(8kb/s)
-samples_per_bit = int(bit_dur * fs)
+samples_per_bit = int(fs / bit_rate)
+print("Samples per bit:", samples_per_bit)
 total_samples = signal.shape[0]
 total_bits = int(total_samples / samples_per_bit)
+print("Total amount of bits:", total_bits)
+Ts = total_samples / fs
+print("duration:", Ts)
+t = np.arange(total_samples) / fs
 
 # demodulation attempt
 # envelope detector method
@@ -50,14 +53,56 @@ sos = scipy.signal.butter(4, f_cutoff, btype = "lowpass", analog = False, output
 # 3 - (x): the array of data to be filter
 envelope = scipy.signal.sosfiltfilt(sos, rectified_signal, axis = 0)
 
+# Comparator Section
 channel_0_raw = signal[:, 0]
 channel_0_envelope = envelope[:, 0]
-demodulated_bits = []
+threshold = (np.max(channel_0_envelope) + np.min(channel_0_envelope)) / 2
+demodulated_signal = (channel_0_envelope > threshold).astype(int)
+demodulated_bits = np.zeros(total_bits, dtype = int)
 
-# for i in range(total_bits):
+for i in range(total_bits):
+    center_sample = i * samples_per_bit + (samples_per_bit // 2)
+    demodulated_bits[i] = 1 if channel_0_envelope[center_sample] > threshold else 0
+print(demodulated_bits)
 
-plt.subplot(2, 1, 1)
-plt.plot(channel_0_envelope)
-plt.subplot(2, 1, 2)
-plt.plot(channel_0_raw)
-plt.show()
+
+bit_string_spaces = " ".join(map(str, demodulated_bits))
+with open("demodulated_bits.txt", "w") as f:
+    f.write(bit_string_spaces)
+
+# pulling spectrogram of demodulated signal
+# Try 1
+
+
+# print("Sampling Rate:", fs)
+# fft_size = 1024
+# num_rows = demodulated_signal.size // fft_size # // is an integer division which rounds down
+# spectrogram = np.zeros((num_rows, fft_size))
+
+# for i in range(num_rows):
+#     spectrogram[i,:] = 10*np.log10(np.abs(np.fft.fftshift(np.fft.fft(demodulated_signal[i*fft_size:(i+1)*fft_size])))**2)
+
+# # Time starts at the top and goes down, eg sample x[0] will be part of the top row displayed
+# plt.imshow(spectrogram, aspect='auto', extent = (fs/-2/1e6, fs/2/1e6, len(demodulated_signal)/fs, 0))
+# plt.xlabel("Frequency [MHz]")
+# plt.ylabel("Time [s]")
+# plt.show()
+
+# Try 2
+
+
+plt.specgram(demodulated_signal, Fs=fs, cmap="plasma")
+plt.show
+
+# plt.figure(1)
+# plt.subplot(2, 1, 1)
+# plt.plot(t, channel_0_envelope)
+# plt.subplot(2, 1, 2)
+# plt.plot(t, demodulated_signal)
+# plt.show()
+
+# spectrogram
+# plt.figure(2)
+# plt.subplot(2, 1, 1)
+# plt.plot(t, fft_spectrum)
+# plt.show()
